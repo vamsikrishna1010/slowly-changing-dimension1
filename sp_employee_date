@@ -1,0 +1,30 @@
+✅ Step 1: Insert Sample Data into Staging
+sql
+INSERT INTO dbo.employee_stg (emp_id, employee_name, state, pincode, phone_no)
+VALUES 
+    (100, 'John Doe', 'Telangana', '500084', '9876543210'),
+    (200, 'Jane Smith', 'Karnataka', '560001', '9123456789');
+✅ Step 2: Run the Procedure
+sql
+EXEC dbo.sp_employee;
+✅ Step 3: View Results
+sql
+SELECT * FROM dbo.employee_stg;
+SELECT * FROM dbo.employee_dim;
+✅ Step 4: Update a Record in Staging
+sql
+UPDATE dbo.employee_stg
+SET employee_name = 'Jane S. Smith'
+WHERE emp_id = 200;
+
+EXEC dbo.sp_employee;
+
+SELECT * FROM dbo.employee_dim;
+🧠 Why This Works
+SCD Type 1 logic ensures that the latest data always overwrites the old data.
+
+The procedure is idempotent—you can run it multiple times without duplicating records.
+
+It handles null-safe comparisons using ISNULL() to avoid false negatives during updates.
+
+Would you like to extend this to include audit columns like last_updated or build an SCD Type 2 version next?
