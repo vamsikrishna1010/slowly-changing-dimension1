@@ -1,0 +1,82 @@
+CREATE PROCEDURE dbo.customer
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    --------------------------------------------------
+    -- 1️⃣ Create Staging Table (customer_stg) if missing
+    --------------------------------------------------
+    IF NOT EXISTS (
+        SELECT * 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_NAME = 'customer_stg' AND TABLE_SCHEMA = 'dbo'
+    )
+    BEGIN
+        CREATE TABLE dbo.customer_stg (
+            customer_id    INT,
+            customer_name  VARCHAR(100),
+            email          VARCHAR(100),
+            city           VARCHAR(50),
+            updated_date   DATETIME
+        );
+    END;
+
+    --------------------------------------------------
+    -- 2️⃣ Create Dimension Table (customer_dim) if missing
+    --------------------------------------------------
+    IF NOT EXISTS (
+        SELECT * 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_NAME = 'customer_dim' AND TABLE_SCHEMA = 'dbo'
+    )
+    BEGIN
+        CREATE TABLE dbo.customer_dim (
+            customer_id    INT,
+            customer_name  VARCHAR(100),
+            email          VARCHAR(100),
+            city           VARCHAR(50),
+            updated_date   DATETIME
+        );
+    END;
+
+    --------------------------------------------------
+    -- 3️⃣ Insert New Records from Staging to Dimension
+    --------------------------------------------------
+    INSERT INTO dbo.customer_dim (customer_id, customer_name, email, city, updated_date)
+    SELECT 
+        stg.customer_id,
+        stg.customer_name,
+        stg.email,
+        stg.city,
+        stg.updated_date
+    FROM dbo.customer_stg AS stg
+    LEFT JOIN dbo.customer_dim AS trg
+        ON trg.customer_id = stg.customer_id
+    WHERE trg.customer_id IS NULL;
+
+    --------------------------------------------------
+    -- 4️⃣ Update Existing Records with Changed Fields
+    --------------------------------------------------
+    UPDATE trg
+    SET 
+        trg.customer_id    = stg.customer_id,
+        trg.customer_name  = stg.customer_name,
+        trg.email          = stg.email,
+        trg.city           = stg.city,
+        trg.updated_date   = stg.updated_date
+    FROM dbo.customer_stg AS stg
+    INNER JOIN dbo.customer_dim AS trg
+        ON trg.customer_id = stg.customer_id
+    WHERE 
+        ISNULL(trg.customer_name, ' ') <> ISNULL(stg.customer_name, ' ') OR
+        ISNULL(trg.email, ' ')         <> ISNULL(stg.email, ' ') OR
+        ISNULL(trg.city, ' ')          <> ISNULL(stg.city, ' ') OR
+        ISNULL(trg.updated_date, ' ')  <> ISNULL(stg.updated_date, ' ');
+
+    --------------------------------------------------
+    -- 5️⃣ View Data (Optional for Debugging)
+    --------------------------------------------------
+    SELECT * FROM dbo.customer_stg;
+    SELECT * FROM dbo.customer_dim;
+END;
+GO
