@@ -1,62 +1,17 @@
-✅ Step 1: Insert Sample Data into the Staging Table
-Start by populating the employee_stg table with sample employee records:
-
+✅ Insert Sample Data
 sql
-INSERT INTO dbo.employee_stg (emp_id, employee_name, state, pincode, phone_no)
+INSERT INTO dbo.customer_stg (customer_id, customer_name, email, city, updated_date)
 VALUES 
-    (100, 'John Doe', 'Telangana', '500084', '9876543210'),
-    (200, 'Jane Smith', 'Karnataka', '560001', '9123456789');
-This simulates new data arriving from a source system.
-
-✅ Step 2: Run the Stored Procedure
-Execute the procedure to apply SCD1 logic:
-
+    (100, 'Vamsi', 'vamsi10@gmail.com', 'Vizag', GETDATE()),
+    (200, 'Krishna', 'krishna@gmail.com', 'Hyderabad', GETDATE()),
+    (300, 'Vamsikrishna', 'vamsikrishna@gmail.com', 'Vizag', GETDATE());
+✅ Run the Procedure
 sql
-EXEC dbo.sp_employee;
-This will:
-
-Insert new records from employee_stg into employee_dim
-
-Update existing records in employee_dim if any field has changed
-
-✅ Step 3: View the Results
-Check the contents of both tables to verify the changes:
-
+EXEC dbo.customer;
+✅ Update a Record in Staging
 sql
-SELECT * FROM dbo.employee_stg;
-SELECT * FROM dbo.employee_dim;
-You should see the same records in both tables after the first execution.
+UPDATE dbo.customer_stg
+SET city = 'Vizag'
+WHERE customer_id = 300;
 
-✅ Step 4: Update a Record in the Staging Table
-Now simulate a change in the source data:
-
-sql
-UPDATE dbo.employee_stg
-SET employee_name = 'Jane S. Smith'
-WHERE emp_id = 200;
-Run the procedure again to apply the update:
-
-sql
-EXEC dbo.sp_employee;
-Then verify the update in the dimension table:
-
-sql
-SELECT * FROM dbo.employee_dim;
-You’ll see that the name for emp_id = 200 has been updated to reflect the new value.
-
-🧠 Why This Works
-SCD Type 1 Logic: Ensures that the most recent data always overwrites the old data in the dimension table.
-
-Idempotent Execution: Running the procedure multiple times won’t duplicate records or cause unintended changes.
-
-Null-Safe Comparisons: The use of ISNULL() in the update logic ensures that NULL values are handled correctly, avoiding false positives or missed updates.
-
-Want to take this further? You could:
-
-Add audit columns like last_updated or source_system
-
-Implement SCD Type 2 to preserve historical changes
-
-Create automated tests or GitHub Actions to validate data integrity
-
-Let me know if you’d like help writing those enhancements or building a companion procedure for customer data!
+EXEC dbo.customer;
