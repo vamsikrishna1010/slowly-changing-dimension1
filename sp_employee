@@ -1,0 +1,75 @@
+CREATE PROCEDURE dbo.sp_employee
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ----------------------------------------
+    -- 1️⃣ Create Staging Table (if not exists)
+    ----------------------------------------
+    IF NOT EXISTS (
+        SELECT * 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_NAME = 'employee_stg' AND TABLE_SCHEMA = 'dbo'
+    )
+    BEGIN
+        CREATE TABLE dbo.employee_stg (
+            emp_id         INT,
+            employee_name  VARCHAR(100),
+            state          VARCHAR(50),
+            pincode        VARCHAR(10),
+            phone_no       VARCHAR(10)
+        );
+    END;
+
+    ----------------------------------------
+    -- 2️⃣ Create Dimension Table (if not exists)
+    ----------------------------------------
+    IF NOT EXISTS (
+        SELECT * 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_NAME = 'employee_dim' AND TABLE_SCHEMA = 'dbo'
+    )
+    BEGIN
+        CREATE TABLE dbo.employee_dim (
+            emp_id         INT,
+            employee_name  VARCHAR(100),
+            state          VARCHAR(50),
+            pincode        VARCHAR(10),
+            phone_no       VARCHAR(10)
+        );
+    END;
+
+    ----------------------------------------
+    -- 3️⃣ Insert New Records from Staging to Dimension
+    ----------------------------------------
+    INSERT INTO dbo.employee_dim (emp_id, employee_name, state, pincode, phone_no)
+    SELECT 
+        src.emp_id,
+        src.employee_name,
+        src.state,
+        src.pincode,
+        src.phone_no
+    FROM dbo.employee_stg AS src
+    LEFT JOIN dbo.employee_dim AS trg
+        ON trg.emp_id = src.emp_id
+    WHERE trg.emp_id IS NULL;
+
+    ----------------------------------------
+    -- 4️⃣ Update Existing Records with Changed Fields
+    ----------------------------------------
+    UPDATE trg
+    SET 
+        trg.employee_name = src.employee_name,
+        trg.state         = src.state,
+        trg.pincode       = src.pincode,
+        trg.phone_no      = src.phone_no
+    FROM dbo.employee_stg AS src
+    INNER JOIN dbo.employee_dim AS trg
+        ON trg.emp_id = src.emp_id
+    WHERE 
+        ISNULL(trg.employee_name, ' ') <> ISNULL(src.employee_name, ' ') OR
+        ISNULL(trg.state, ' ')         <> ISNULL(src.state, ' ') OR
+        ISNULL(trg.pincode, ' ')       <> ISNULL(src.pincode, ' ') OR
+        ISNULL(trg.phone_no, ' ')      <> ISNULL(src.phone_no, ' ');
+END;
+GO
